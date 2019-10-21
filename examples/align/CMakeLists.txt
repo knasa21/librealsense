@@ -20,7 +20,7 @@ endif()
 
 if(BUILD_GRAPHICAL_EXAMPLES)
     #align
-    add_executable(rs-align rs-align.cpp ../../third-party/imgui/imgui.cpp ../../third-party/imgui/imgui_draw.cpp ../../third-party/imgui/imgui_impl_glfw.cpp)
+    add_executable(rs-align rs-align.cpp hole-filter-with-color.cpp hole-filter-with-color.h ../../third-party/imgui/imgui.cpp ../../third-party/imgui/imgui_draw.cpp ../../third-party/imgui/imgui_impl_glfw.cpp)
     target_link_libraries(rs-align ${DEPENDENCIES})
     include_directories(rs-align ../../common ../../third-party/imgui)
     set_target_properties (rs-align PROPERTIES FOLDER Examples)
