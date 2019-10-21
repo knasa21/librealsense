@@ -26,6 +26,7 @@
 #include "proc/decimation-filter.h"
 #include "proc/spatial-filter.h"
 #include "proc/zero-order.h"
+#include "proc/hole-filter-with-color.h"
 #include "proc/hole-filling-filter.h"
 #include "proc/yuy2rgb.h"
 #include "proc/rates-printer.h"
@@ -1924,6 +1925,14 @@ rs2_processing_block* rs2_create_zero_order_invalidation_block(rs2_error** error
     auto block = std::make_shared<librealsense::zero_order>();
 
     return new rs2_processing_block{ block };
+}
+NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
+
+rs2_processing_block* rs2_create_hole_filter_with_color_block( rs2_error** error ) BEGIN_API_CALL
+{
+	auto block = std::make_shared<librealsense::hole_filter_with_color>();
+
+	return new rs2_processing_block{ block };
 }
 NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
 

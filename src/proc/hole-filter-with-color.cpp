@@ -6,14 +6,6 @@
 // rs.cpp
 // ==============================
 
-rs2_processing_block* rs2_create_hole_filter_with_color_block( rs2_error** error ) BEGIN_API_CALL
-{
-	auto block = std::make_shared<librealsense::hole_filter_with_color>();
-	return new rs2_processing_block{ block };
-}
-NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
-
-
 // ==============================
 // hole-filter-with-color.cpp 
 // ==============================

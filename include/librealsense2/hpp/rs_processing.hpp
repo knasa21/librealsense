@@ -1008,5 +1008,37 @@ namespace rs2
             return block;
         }
     };
+
+	/**
+	カラー画像を使って深度画像のエラー値を修正する穴埋めフィルタ
+	*/
+	class hole_filter_with_color : public filter
+	{
+	public:
+		hole_filter_with_color() : filter( init(), 1 ) {}
+
+		frameset process( frameset frames )
+		{
+			return filter::process( frames );
+		}
+
+	protected:
+		hole_filter_with_color( std::shared_ptr<rs2_processing_block> block ) : filter( block, 1 ) {}
+
+	private:
+		friend class context;
+		std::shared_ptr<rs2_processing_block> init()
+		{
+			rs2_error* e = nullptr;
+
+			auto block = std::shared_ptr<rs2_processing_block>(
+				rs2_create_hole_filter_with_color_block( &e ),
+				rs2_delete_processing_block
+				);
+			error::handle( e );
+
+			return block;
+		}
+	};
 }
 #endif // LIBREALSENSE_RS2_PROCESSING_HPP

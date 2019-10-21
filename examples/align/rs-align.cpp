@@ -54,6 +54,7 @@ int main(int argc, char * argv[]) try
     // that should not be performed in the main loop
     rs2::align align_to_depth(RS2_STREAM_DEPTH);
     rs2::align align_to_color(RS2_STREAM_COLOR);
+	rs2::hole_filter_with_color hole;
 
     float       alpha = 0.5f;               // Transparancy coefficient 
     direction   dir = direction::to_depth;  // Alignment direction
@@ -73,6 +74,8 @@ int main(int argc, char * argv[]) try
             // Align all frames to color viewport
             frameset = align_to_color.process(frameset);
         }
+
+		frameset = hole.process( frameset );
 
         // With the aligned frameset we proceed as usual
         auto depth = frameset.get_depth_frame();
