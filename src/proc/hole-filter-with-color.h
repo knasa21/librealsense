@@ -31,6 +31,8 @@ public:
 protected:
 	bool should_process( const rs2::frame& frame ) override;
 	rs2::frame process_frame( const rs2::frame_source& soruce, const rs2::frame& f ) override;
+
+	rs2::frame prepare_target_frame( const rs2::frame& f, const rs2::frame_source& source, rs2_extension tgt_type );
 	
 };
 
