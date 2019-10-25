@@ -33,7 +33,27 @@ protected:
 	rs2::frame process_frame( const rs2::frame_source& soruce, const rs2::frame& f ) override;
 
 	rs2::frame prepare_target_frame( const rs2::frame& f, const rs2::frame_source& source, rs2_extension tgt_type );
-	
+
+	/** sRGBからCIE 1976 L*a*b*への変換
+	* \param[in] rgb 変換元 画像すべてのRGBを持つ配列
+	* \param[in,out] lab 変換先 画像すべてのL*a*b*値を持つ配列
+	* \param[in] 画像のサイズ(width * height)
+	*/
+	void convert_rgb8_to_lab( const uint8_t* rgb, float* lab, const uint32_t size );
+
+	/** sRGBからCIE XYZへの変換
+	* \param[in] rgb 一画素のRGBの配列
+	* \param[in,out] x Xの値
+	* \param[in,out] y Yの値
+	* \param[in,out] z Zの値
+	*/
+	void convert_rgb8_to_xyz( const uint8_t* rgb, float& x, float& y, float& z );
+
+	/** ガンマ補正された値を戻す
+	* \param[in] u sRGBのどれか1色の値
+	* \return ガンマ展開した値
+	*/
+	float gamma_expanded( const float u );
 };
 
 }

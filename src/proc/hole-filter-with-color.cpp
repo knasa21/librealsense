@@ -69,40 +69,90 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 	auto src_depth = frames.first_or_default( RS2_STREAM_DEPTH, RS2_FORMAT_Z16 ).as<rs2::depth_frame>();
 	auto src_color = frames.first_or_default( RS2_STREAM_COLOR, RS2_FORMAT_RGB8 ).as<rs2::video_frame>();
 
+
 	// ここに処理を書く
 	int depth_w = src_depth.get_width();
 	int depth_h = src_depth.get_height();
+
+	int color_w = src_color.get_width();
+	int color_h = src_color.get_height();
+
+	// サイズが同じ前提なので異なる場合は処理をしない
+	if ( depth_w != color_w || depth_h != color_h )
+	{
+		return f;
+	}
+
+	int width = depth_w;
+	int height = depth_h;
+	int size = width * height;
+
 
 	auto tgt_depth = source.allocate_video_frame(
 		src_depth.get_profile(),
 		src_depth,
 		src_depth.get_bytes_per_pixel(),
-		depth_w,
-		depth_h,
+		width,
+		height,
 		src_depth.get_stride_in_bytes(),
 		RS2_EXTENSION_DEPTH_FRAME
 	);
 
 	if ( tgt_depth )
 	{
-		auto ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )tgt_depth.get() );
-		auto orig = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )src_depth.get() );
+		auto tgt_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )tgt_depth.get() );
+		auto orig_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )src_depth.get() );
+		auto orig_color_ptr = dynamic_cast<librealsense::video_frame*>( ( librealsense::frame_interface* )src_color.get() );
 
-		auto depth_data = (uint16_t*)orig->get_frame_data();
-		auto new_data = (uint16_t*)ptr->get_frame_data();
+		auto depth_data = (uint16_t*)orig_depth_ptr->get_frame_data();
+		auto new_data = (uint16_t*)tgt_depth_ptr->get_frame_data();
 
-		ptr->set_sensor( orig->get_sensor() );
-		auto du = orig->get_units();
+		memset( new_data, 0, size * sizeof( uint16_t ) );
 
-		memset( new_data, 0, depth_w * depth_h * sizeof( uint16_t ) );
-		for ( int i = 0; i < depth_w * depth_h; ++i )
+		tgt_depth_ptr->set_sensor( orig_depth_ptr->get_sensor() );
+		auto du = orig_depth_ptr->get_units();
+
+		auto rgb_data = (uint8_t*)orig_color_ptr->get_frame_data();
+		float* lab_data = new float[size*3];
+
+		convert_rgb8_to_lab( rgb_data, lab_data, size );
+
+		for ( int y = 0; y < height; ++y )
 		{
-			auto dist = du * depth_data[i];
-			if ( dist >= 0 && dist <= 1.0 )
+			for ( int x = 0; x < width; ++x )
 			{
-				new_data[i] = depth_data[i];
+				int i = y * width + x;
+
+				uint8_t* rgb;
+				rgb = rgb_data + ( y * width + x ) * 3;
+				float* lab;
+				lab = lab_data + ( y * width + x ) * 3;
+
+				/*for ( int k = 0; k < 3; ++k )
+				{
+					p = color_data + ( y * depth_w + x ) * 3 + k;
+				}*/
+				uint8_t re = rgb[0];
+				uint8_t gr = rgb[1];
+				uint8_t bl = rgb[2];
+
+				float l = lab[0];
+				float a = lab[1];
+				float b = lab[2];
+
+				if ( re > gr && re > bl )
+				{
+					auto dist = du * depth_data[i];
+
+					int mirror = ( width - x ) + width * y;
+					new_data[i] = depth_data[i];
+				}
+
+
 			}
 		}
+
+		delete[] lab_data;
 
 		output_frames.push_back( tgt_depth );
 		output_frames.push_back( src_color );
@@ -121,6 +171,65 @@ rs2::frame hole_filter_with_color::prepare_target_frame( const rs2::frame& f, co
 	//auto ref = source.allocate_video_frame( )
 
 	return vf;
+}
+
+void hole_filter_with_color::convert_rgb8_to_lab( const uint8_t* rgb, float* lab, const uint32_t size )
+{
+	// 式温度6,500Kの昼光色を想定した標準光源D65のXYZ値
+	float xn = 95.05f, yn = 100.0f, zn = 108.91f;
+
+	// xyzの値の補正　pow( 24/116, 3 ) = 0.008856, 1 / ( 3*pow(24/116) ) = 7.787037
+	auto f = []( float val )
+	{
+		return val > 0.008856 ? std::powf( val, 1.0f / 3.0f ) : ( 7.787037 * val ) + 0.137931;
+	};
+
+	for ( int i = 0; i < size; ++i )
+	{
+		// RGB,L*a*bそれぞれの編集位置のポインタ
+		const uint8_t* p_rgb = rgb +i * 3;
+		float* p_lab = lab + i * 3;
+
+		// sRGBからCIE XYZへ変換
+		float x, y, z;
+		convert_rgb8_to_xyz( p_rgb, x, y, z );
+
+		float fx = f( x / xn );
+		float fy = f( y / yn );
+		float fz = f( z / zn );
+
+		p_lab[0] = 116 * fy - 16;
+		p_lab[1] = 500 * ( fx - fy );
+		p_lab[2] = 200 * ( fy - fz );
+
+	}
+}
+
+void hole_filter_with_color::convert_rgb8_to_xyz( const uint8_t* rgb, float& x, float& y, float& z )
+{
+	// RGBの値を0.0~1.0に
+	float r = rgb[0] / 255.0f;
+	float g = rgb[1] / 255.0f;
+	float b = rgb[2] / 255.0f;
+
+	// ガンマ補正の除去
+	r = gamma_expanded( r );
+	g = gamma_expanded( g );
+	b = gamma_expanded( b );
+
+	// XYZに変換
+	x = 0.4124 * r + 0.3576 * g + 0.1805 * b;
+	y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	z = 0.0193 * r + 0.1192 * g + 0.9505 * b;
+
+	x *= 100;
+	y *= 100;
+	z *= 100;
+}
+
+float hole_filter_with_color::gamma_expanded( const float u )
+{
+	return u > 0.04045 ? pow( ( u+0.055 )/1.055, 2.4 ) : ( u / 12.92 );
 }
 
 }

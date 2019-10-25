@@ -44,8 +44,8 @@ int main(int argc, char * argv[]) try
     // Create a pipeline to easily configure and start the camera
     rs2::pipeline pipe;
     rs2::config cfg;
-    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16);
-    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16);
+    cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_RGB8);
     pipe.start(cfg);
 
     // Define two align objects. One will be used to align
