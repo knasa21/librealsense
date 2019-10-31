@@ -109,7 +109,7 @@ int main(int argc, char * argv[]) try
             depth_image.render(colorized_depth, { 0, 0, app.width(), app.height() }, 1 - alpha);
         }
 
-		draw_square( 380, 180, 470, 400 );
+		draw_square( 380, 180, 470, 300 );
 
         glColor4f(1.f, 1.f, 1.f, 1.f);
         glDisable(GL_BLEND);

@@ -37,7 +37,7 @@ protected:
 private:
 
 	// カーネルサイズごとの距離の分散(標準偏差σの二乗)
-	float sigma_space_pow2[5] ={ 0.444f, 1.12f, 2.811f, 6.829f, 15.122 };
+	float sqr_space_sigma_array[5] ={ 0.444f, 1.12f, 2.811f, 6.829f, 15.122 };
 
 	/** sRGBからCIE 1976 L*a*b*への変換
 	* \param[in] rgb 変換元 画像すべてのRGBを持つ配列
@@ -71,11 +71,17 @@ private:
 	* \param[out] new_depth 出力値
 	* \param[in] depth_image 深度画像データ
 	* \param[in] lab_image 色画像データ
+	* \param[in] kernel_w　カーネルの一片の半分の切り捨て
 	* \param[in] x 対称x座標
 	* \param[in] y 対称y座標
 	*/
-	void kernel_process( uint16_t& new_depth, const uint16_t* depth_image, const float* lab_image, const int x, const int y );
+	void kernel_process( uint16_t& new_depth, const uint16_t* depth_image, const float* lab_image, const int kernel_w, const int x, const int y );
 
+	/** 分散を求める(ただし0を無視する)
+	* \param[in] vals データ配列
+	* \return 分散値
+	*/
+	float calc_dispersion( const std::vector<float>& vals );
 
 };
 
