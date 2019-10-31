@@ -117,40 +117,105 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 
 		convert_rgb8_to_lab( rgb_data, lab_data, size );
 
-		for ( int y = 0; y < height; ++y )
-		{
-			for ( int x = 0; x < width; ++x )
+		const int kernel_w = 3;
+		const int kernel_size = 2 * kernel_w + 1;
+		float kernel_lab_l[kernel_size * kernel_size] ={ 0 };
+		float kernel_lab_a[kernel_size * kernel_size] ={ 0 };
+		float kernel_lab_b[kernel_size * kernel_size] ={ 0 };
+		uint16_t kernel_depth[kernel_size * kernel_size] ={ 0 };
+
+		const float space_sigma = 3.3f;
+		const float color_sigma = 90.0f;
+
+		//for ( int y = 180; y < 300; ++y )
+		//{
+			//for ( int x = 380; x < 470; ++x )
+			//{
+
+		const int repeat_time = 5;
+		//for ( int lap = 0; lap < repeat_time; ++lap )
+		//{
+
+			for ( int y = 1; y < height - 1; ++y )
 			{
-				int i = y * width + x;
-
-				uint8_t* rgb;
-				rgb = rgb_data + ( y * width + x ) * 3;
-				float* lab;
-				lab = lab_data + ( y * width + x ) * 3;
-
-				/*for ( int k = 0; k < 3; ++k )
+				for ( int x = 1; x < width - 1; ++x )
 				{
-					p = color_data + ( y * depth_w + x ) * 3 + k;
-				}*/
-				uint8_t re = rgb[0];
-				uint8_t gr = rgb[1];
-				uint8_t bl = rgb[2];
+					int i = y * width + x;
+					if ( y < 180 || y > 400 || x < 380 || x > 470 )
+					{
+						new_data[i] = depth_data[i];
+						continue;
+					}
 
-				float l = lab[0];
-				float a = lab[1];
-				float b = lab[2];
+					uint8_t* rgb;
+					rgb = rgb_data + ( y * width + x ) * 3;
+					float* lab;
+					lab = lab_data + ( y * width + x ) * 3;
 
-				if ( re > gr && re > bl )
-				{
-					auto dist = du * depth_data[i];
+					float non_zero_counter = 0;
+					for ( int ky = -kernel_w; ky <= kernel_w; ++ky )
+					{
+						for ( int kx = -kernel_w; kx <= kernel_w; ++kx )
+						{
+							int k = ( y + ky ) * width + ( x + kx );
+							//auto dist = du * depth_data[k];
+							auto dist = depth_data[k];
 
-					int mirror = ( width - x ) + width * y;
-					new_data[i] = depth_data[i];
+							//int mirror = ( width - x ) + width * y;
+							if ( dist != 0 )
+							{
+								int kernel_i = ( ky + 1 ) * kernel_size + ( kx + 1 );
+								kernel_depth[kernel_i] = dist;
+								kernel_lab_l[kernel_i] = lab_data[k*3];
+								kernel_lab_a[kernel_i] = lab_data[k*3+1];
+								kernel_lab_b[kernel_i] = lab_data[k*3+2];
+								++non_zero_counter;
+							}
+						}
+					}
+
+					if ( non_zero_counter > 5 )
+					{
+						// •ª•ê
+						float sum_deno = 0;
+						// •ªŽq
+						float sum_nume = 0;
+						for ( int k = 0; k < kernel_size * kernel_size; ++k )
+						{
+							if ( kernel_depth[k] == 0 )
+							{
+								continue;
+							}
+							int x = k % kernel_size;
+							int y = k / kernel_size;
+
+							float P = std::exp( -( x * x + y * y ) / ( 2 * space_sigma * space_sigma ) );
+							float N =
+								std::exp(
+									-std::sqrtf(
+										std::powf( lab[0] - kernel_lab_l[k], 2.0f ) +
+										std::powf( lab[1] - kernel_lab_a[k], 2.0f ) +
+										std::powf( lab[2] - kernel_lab_b[k], 2.0f )
+									) /
+									( 2 * color_sigma * color_sigma )
+								);
+
+							sum_deno += kernel_depth[k] * P * N;
+							sum_nume += P * N;
+						}
+						uint16_t n = sum_deno / sum_nume;
+						new_data[i] = n;
+					}
+
+					memset( kernel_depth, 0, sizeof( uint16_t ) * kernel_size * kernel_size );
+					memset( kernel_lab_l, 0, sizeof( kernel_lab_l ) );
+					memset( kernel_lab_a, 0, sizeof( kernel_lab_a ) );
+					memset( kernel_lab_b, 0, sizeof( kernel_lab_b ) );
+					//new_data[i] = sum / ( kernel_size * kernel_size );
 				}
-
-
 			}
-		}
+		//}
+
 
 		delete[] lab_data;
 
@@ -230,6 +295,13 @@ void hole_filter_with_color::convert_rgb8_to_xyz( const uint8_t* rgb, float& x, 
 float hole_filter_with_color::gamma_expanded( const float u )
 {
 	return u > 0.04045 ? pow( ( u+0.055 )/1.055, 2.4 ) : ( u / 12.92 );
+}
+
+float hole_filter_with_color::lab_distance( const float* r_lab, const float* l_lab )
+{
+	return std::powf( r_lab[0] - l_lab[0], 2 )
+		+  std::powf( r_lab[1] - l_lab[1], 2 )
+		+  std::powf( r_lab[2] - l_lab[2], 2 );
 }
 
 }

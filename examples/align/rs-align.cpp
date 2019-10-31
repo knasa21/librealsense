@@ -31,12 +31,15 @@ enum class direction
 };
 
 // Forward definition of UI rendering, implemented below
-void render_slider(rect location, float* alpha, direction* dir);
+void render_slider(rect location, float* alpha, direction* dir, bool* useHF);
+
+// デバッグ用四角の描画
+void draw_square( double x1, double y1, double x2, double y2 );
 
 int main(int argc, char * argv[]) try
 {
     // Create and initialize GUI related objects
-    window app(1280, 720, "RealSense Align Example"); // Simple window handling
+    window app(848, 480, "RealSense Align Example"); // Simple window handling
     ImGui_ImplGlfw_Init(app, false);      // ImGui library intializition
     rs2::colorizer c;                     // Helper to colorize depth images
     texture depth_image, color_image;     // Helpers for renderig images
@@ -57,7 +60,9 @@ int main(int argc, char * argv[]) try
 	rs2::hole_filter_with_color hole;
 
     float       alpha = 0.5f;               // Transparancy coefficient 
-    direction   dir = direction::to_depth;  // Alignment direction
+    direction   dir = direction::to_color;  // Alignment direction
+
+	bool useHF = true;
 
     while (app) // Application still alive?
     {
@@ -75,7 +80,10 @@ int main(int argc, char * argv[]) try
             frameset = align_to_color.process(frameset);
         }
 
-		frameset = hole.process( frameset );
+		if ( useHF )
+		{
+			frameset = hole.process( frameset );
+		}
 
         // With the aligned frameset we proceed as usual
         auto depth = frameset.get_depth_frame();
@@ -101,12 +109,14 @@ int main(int argc, char * argv[]) try
             depth_image.render(colorized_depth, { 0, 0, app.width(), app.height() }, 1 - alpha);
         }
 
+		draw_square( 380, 180, 470, 400 );
+
         glColor4f(1.f, 1.f, 1.f, 1.f);
         glDisable(GL_BLEND);
 
         // Render the UI:
         ImGui_ImplGlfw_NewFrame(1);
-        render_slider({ 15.f, app.height() - 60, app.width() - 30, app.height() }, &alpha, &dir);
+        render_slider({ 15.f, app.height() - 60, app.width() - 30, app.height() }, &alpha, &dir, &useHF);
         ImGui::Render();
     }
 
@@ -123,7 +133,7 @@ catch (const std::exception & e)
     return EXIT_FAILURE;
 }
 
-void render_slider(rect location, float* alpha, direction* dir)
+void render_slider(rect location, float* alpha, direction* dir, bool* useHF)
 {
     static const int flags = ImGuiWindowFlags_NoCollapse
         | ImGuiWindowFlags_NoScrollbar
@@ -158,5 +168,22 @@ void render_slider(rect location, float* alpha, direction* dir)
         *dir = to_color ? direction::to_color : direction::to_depth;
     }
 
+	ImGui::SameLine();
+	ImGui::SetCursorPosX( location.w / 2);
+	ImGui::Checkbox( "Hole Filter", useHF );
+
     ImGui::End();
+}
+
+void draw_square( double x1, double y1, double x2, double y2 )
+{
+	glColor3d( 1.f, 0, 0 );
+	glBegin(GL_LINE_LOOP);
+
+	glVertex2d( x1, y1 );
+	glVertex2d( x1, y2 );
+	glVertex2d( x2, y2 );
+	glVertex2d( x2, y1 );
+
+	glEnd();
 }
