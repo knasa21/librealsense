@@ -6,6 +6,11 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 
+#include <chrono>
+#include <iostream>
+
+using namespace std;
+
 /*
  This example introduces the concept of spatial stream alignment.
  For example usecase of alignment, please check out align-advanced and measure demos.
@@ -36,8 +41,13 @@ void render_slider(rect location, float* alpha, direction* dir, bool* useHF);
 // デバッグ用四角の描画
 void draw_square( double x1, double y1, double x2, double y2 );
 
+void timer_start( chrono::system_clock::time_point& time_point );
+void timer_end( const chrono::system_clock::time_point& time_point, const std::string& text );
+
 int main(int argc, char * argv[]) try
 {
+	chrono::system_clock::time_point start;
+
     // Create and initialize GUI related objects
     window app(848, 480, "RealSense Align Example"); // Simple window handling
     ImGui_ImplGlfw_Init(app, false);      // ImGui library intializition
@@ -69,6 +79,7 @@ int main(int argc, char * argv[]) try
         // Using the align object, we block the application until a frameset is available
         rs2::frameset frameset = pipe.wait_for_frames();
 
+		timer_start( start );
         if (dir == direction::to_depth)
         {
             // Align all frames to depth viewport
@@ -79,10 +90,13 @@ int main(int argc, char * argv[]) try
             // Align all frames to color viewport
             frameset = align_to_color.process(frameset);
         }
+		timer_end( start, "align" );
 
 		if ( useHF )
 		{
+			timer_start( start );
 			frameset = hole.process( frameset );
+			timer_end( start, "hole process" );
 		}
 
         // With the aligned frameset we proceed as usual
@@ -186,4 +200,19 @@ void draw_square( double x1, double y1, double x2, double y2 )
 	glVertex2d( x2, y1 );
 
 	glEnd();
+}
+
+void timer_start( chrono::system_clock::time_point& time_point )
+{
+	time_point = chrono::system_clock::now();
+}
+
+void timer_end( const chrono::system_clock::time_point& time_point, const std::string& text )
+{
+	auto end = chrono::system_clock::now();
+
+	double time = static_cast<double>( chrono::duration_cast<chrono::microseconds>
+		( end - time_point ).count() / 1000.0 );
+
+	cout << "[ " << text << " } : " << time << " ms " << endl;
 }

@@ -62,6 +62,7 @@ bool hole_filter_with_color::should_process( const rs2::frame& frame )
 
 rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& source, const rs2::frame& f )
 {
+	//timer_start();
 	std::vector<rs2::frame> output_frames;
 	std::vector<rs2::frame> other_frames;
 
@@ -101,8 +102,11 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 	std::vector<float> test_vec ={ 2,1,2,1,0,1,2,1,2 };
 	float test_disp = calc_dispersion( test_vec );
 
+	//timer_end("init");
+
 	if ( tgt_depth )
 	{
+		//timer_start();
 		auto tgt_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )tgt_depth.get() );
 		auto orig_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )src_depth.get() );
 		auto orig_color_ptr = dynamic_cast<librealsense::video_frame*>( ( librealsense::frame_interface* )src_color.get() );
@@ -118,7 +122,9 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		auto rgb_data = (uint8_t*)orig_color_ptr->get_frame_data();
 		float* lab_data = new float[size*3];
 
+		timer_start();
 		convert_rgb8_to_lab( rgb_data, lab_data, size );
+		timer_end( "convert_rgb8_to_lab" );
 
 		const int kernel_w = 4;
 		const int kernel_size = 2 * kernel_w + 1;
@@ -127,7 +133,9 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		float kernel_lab_b[kernel_size * kernel_size] ={ 0 };
 		uint16_t kernel_depth[kernel_size * kernel_size] ={ 0 };
 
+		//timer_end("init 2");
 
+		//timer_start();
 		for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
@@ -136,11 +144,13 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				new_data[i] = depth_data[i];
 				if ( 380 < x && x < 470 && 180 < y && y < 300 )
 				{
-					kernel_process( new_data[i], depth_data, lab_data, kernel_w, x, y );
+					//kernel_process( new_data[i], depth_data, lab_data, kernel_w, x, y );
 				}
 			}
 		}
+		//timer_end("filter roop 1");
 
+		//timer_start();
 		for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
@@ -148,11 +158,13 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				int i = y * width + x;
 				if ( 380 < x && x < 470 && 180 < y && y < 300 )
 				{
-					kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
+					//kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
 				}
 			}
 		}
+		//timer_end("filter roop 2");
 
+		//timer_start();
 		for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
@@ -160,10 +172,11 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				int i = y * width + x;
 				if ( 380 < x && x < 470 && 180 < y && y < 300 )
 				{
-					kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
+					//kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
 				}
 			}
 		}
+		//timer_end("filter roop 3");
 
 		/*for ( int y = 1; y < height - 1; ++y )
 		{
@@ -176,7 +189,6 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				}
 			}
 		}*/
-
 
 
 		delete[] lab_data;
@@ -394,6 +406,20 @@ float hole_filter_with_color::calc_dispersion( const std::vector<float>& vals )
 	return sum / count;
 }
 
+void hole_filter_with_color::timer_start()
+{
+	_chrono_start = chrono::system_clock::now();
+}
+
+void hole_filter_with_color::timer_end( const string& text )
+{
+	_chrono_end = chrono::system_clock::now();
+
+	double time = static_cast<double>( chrono::duration_cast<chrono::microseconds>
+		( _chrono_end - _chrono_start ).count() / 1000.0 );
+
+	cout << "[ " << text << " } : " << time << " ms " << endl;
+}
 
 
 

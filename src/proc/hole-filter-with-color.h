@@ -18,6 +18,11 @@
 // ==============================
 #include "proc/synthetic-stream.h"
 
+#include <iostream>
+#include <chrono>
+
+using namespace std;
+
 namespace librealsense
 {
 
@@ -82,6 +87,17 @@ private:
 	* \return 分散値
 	*/
 	float calc_dispersion( const std::vector<float>& vals );
+
+	chrono::system_clock::time_point _chrono_start, _chrono_end;
+
+	/** 時間計測開始
+	*/
+	void timer_start();
+
+	/** 時間計測終了、出力
+	* \param[in] text 出力時追加テキスト
+	*/
+	void timer_end( const string& text );
 
 };
 
