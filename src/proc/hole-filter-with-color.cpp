@@ -88,8 +88,22 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 	int height = depth_h;
 	int size = width * height;
 
+	if ( !_tgt_depth )
+	{
+		_tgt_depth = make_shared<rs2::frame>( source.allocate_video_frame(
+			src_depth.get_profile(),
+			src_depth,
+			src_depth.get_bytes_per_pixel(),
+			width,
+			height,
+			src_depth.get_stride_in_bytes(),
+			RS2_EXTENSION_DEPTH_FRAME
+		) );
 
-	auto tgt_depth = source.allocate_video_frame(
+		reset_cache();
+	}
+
+	/*auto tgt_depth = source.allocate_video_frame(
 		src_depth.get_profile(),
 		src_depth,
 		src_depth.get_bytes_per_pixel(),
@@ -97,17 +111,14 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		height,
 		src_depth.get_stride_in_bytes(),
 		RS2_EXTENSION_DEPTH_FRAME
-	);
-
-	std::vector<float> test_vec ={ 2,1,2,1,0,1,2,1,2 };
-	float test_disp = calc_dispersion( test_vec );
+	);*/
 
 	//timer_end("init");
 
-	if ( tgt_depth )
+	if ( _tgt_depth )
 	{
 		//timer_start();
-		auto tgt_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )tgt_depth.get() );
+		auto tgt_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )_tgt_depth->get() );
 		auto orig_depth_ptr = dynamic_cast<librealsense::depth_frame*>( ( librealsense::frame_interface* )src_depth.get() );
 		auto orig_color_ptr = dynamic_cast<librealsense::video_frame*>( ( librealsense::frame_interface* )src_color.get() );
 
@@ -120,10 +131,11 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		auto du = orig_depth_ptr->get_units();
 
 		auto rgb_data = (uint8_t*)orig_color_ptr->get_frame_data();
-		float* lab_data = new float[size*3];
+		//float* lab_data = new float[size*3];
+		if ( !_lab_data ) { _lab_data.reset( new float[size * 3] ); }
 
 		timer_start();
-		convert_rgb8_to_lab( rgb_data, lab_data, size );
+		convert_rgb8_to_lab( rgb_data, _lab_data.get(), width, height );
 		timer_end( "convert_rgb8_to_lab" );
 
 		const int kernel_w = 4;
@@ -144,7 +156,7 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				new_data[i] = depth_data[i];
 				if ( 380 < x && x < 470 && 180 < y && y < 300 )
 				{
-					kernel_process( new_data[i], depth_data, lab_data, kernel_w, x, y );
+					kernel_process( new_data[i], depth_data, _lab_data.get(), kernel_w, x, y );
 				}
 			}
 		}
@@ -193,9 +205,9 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		*/
 
 
-		delete[] lab_data;
+		//delete[] lab_data;
 
-		output_frames.push_back( tgt_depth );
+		output_frames.push_back( *_tgt_depth );
 		output_frames.push_back( src_color );
 
 		// フレームをまとめて、返す
@@ -214,8 +226,9 @@ rs2::frame hole_filter_with_color::prepare_target_frame( const rs2::frame& f, co
 	return vf;
 }
 
-void hole_filter_with_color::convert_rgb8_to_lab( const uint8_t* rgb, float* lab, const uint32_t size )
+void hole_filter_with_color::convert_rgb8_to_lab( const uint8_t* rgb, float* lab, const uint16_t width, const uint16_t height )
 {
+	int size = width * height;
 	// 式温度6,500Kの昼光色を想定した標準光源D65のXYZ値
 	float xn = 95.05f, yn = 100.0f, zn = 108.91f;
 

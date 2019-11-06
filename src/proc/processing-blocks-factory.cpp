@@ -4,6 +4,7 @@
 #include "processing-blocks-factory.h"
 #include "sse/sse-align.h"
 #include "cuda/cuda-align.h"
+#include "cuda/cuda-hole-filter-with-color.h"
 
 namespace librealsense
 {
@@ -29,7 +30,7 @@ namespace librealsense
 #ifdef RS2_USE_CUDA
 	std::shared_ptr<librealsense::hole_filter_with_color> create_hole_filter_with_color()
 	{
-		return std::make_shared<librealsense::hole_filter_with_color>();
+		return std::make_shared<librealsense::hole_filter_with_color_cuda>();
 	}
 #else
 #endif // RS2_USE_CUDA
