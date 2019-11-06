@@ -92,7 +92,7 @@ void hole_filter_with_color_cuda_helper::convert_rgb8_to_lab( const uint8_t* h_r
 
 	cudaDeviceSynchronize();
 
-	cudaMemcpy( h_lab_out, _d_lab_out.get(), size * 3, cudaMemcpyDeviceToHost );
+	cudaMemcpy( h_lab_out, _d_lab_out.get(), size * 3 * sizeof(float), cudaMemcpyDeviceToHost );
 }
 
 

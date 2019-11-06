@@ -140,15 +140,17 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 
 		const int kernel_w = 4;
 		const int kernel_size = 2 * kernel_w + 1;
-		float kernel_lab_l[kernel_size * kernel_size] ={ 0 };
-		float kernel_lab_a[kernel_size * kernel_size] ={ 0 };
-		float kernel_lab_b[kernel_size * kernel_size] ={ 0 };
+		//float kernel_lab_l[kernel_size * kernel_size] ={ 0 };
+		//float kernel_lab_a[kernel_size * kernel_size] ={ 0 };
+		//float kernel_lab_b[kernel_size * kernel_size] ={ 0 };
 		uint16_t kernel_depth[kernel_size * kernel_size] ={ 0 };
 
 		//timer_end("init 2");
 
 		timer_start();
-		for ( int y = 1; y < height - 1; ++y )
+		hole_filter_process( new_data, depth_data, _lab_data.get(), kernel_w, width, height );
+		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
+		/*for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
 			{
@@ -159,7 +161,7 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 					kernel_process( new_data[i], depth_data, _lab_data.get(), kernel_w, x, y );
 				}
 			}
-		}
+		}*/
 		timer_end("filter roop 1");
 
 		/*
@@ -292,6 +294,22 @@ float hole_filter_with_color::lab_distance( const float* r_lab, const float* l_l
 		std::powf( r_lab[0] - l_lab[0], 2 )
 		+	std::powf( r_lab[1] - l_lab[1], 2 )
 		+	std::powf( r_lab[2] - l_lab[2], 2 );
+}
+
+void hole_filter_with_color::hole_filter_process( uint16_t * new_depth_image, const uint16_t * depth_image, const float * lab_image, const int kernel_w, const int width, const int height )
+{
+		for ( int y = 1; y < height - 1; ++y )
+		{
+			for ( int x = 1; x < width - 1; ++x )
+			{
+				int i = y * width + x;
+				new_depth_image[i] = depth_image[i];
+				if ( 380 < x && x < 470 && 180 < y && y < 300 )
+				{
+					kernel_process( new_depth_image[i], depth_image, lab_image, kernel_w, x, y );
+				}
+			}
+		}
 }
 
 void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t* depth_image, const float* lab_image, const int kernel_w, const int x, const int y )

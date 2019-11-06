@@ -66,6 +66,23 @@ protected:
 	*/
 	virtual float lab_distance( const float* r_lab, const float* l_lab );
 
+	/** 穴埋めフィルタ本体
+	* \param[out] new_depth 出力
+	* \param[in] depth_image 深度画像データ
+	* \param[in] lab_image 色画像データ
+	* \param[in] kernel_w　カーネルの一片の半分の切り捨て
+	* \param[in] width 横幅
+	* \param[in] height 縦幅
+	*/
+	virtual void hole_filter_process(
+		uint16_t* new_depth_image,
+		const uint16_t* depth_image,
+		const float* lab_image,
+		const int kernel_w,
+		const int width,
+		const int height
+	);
+
 	/** 指定座標におけるカーネル処理
 	* \param[out] new_depth 出力
 	* \param[in] depth_image 深度画像データ
