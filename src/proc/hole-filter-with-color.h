@@ -1,21 +1,7 @@
 #pragma once
 
-//#include "../include/librealsense2/hpp/rs_frame.hpp"
-//#include "../include/librealsense2/hpp/rs_types.hpp"
-//#include "../include/librealsense2/hpp/rs_options.hpp"
 #include "../include/librealsense2/hpp/rs_processing.hpp"
 
-// ==============================
-// rs_processing.h 
-// ==============================
-
-// ==============================
-// rs_processing.hpp 
-// ==============================
-
-// ==============================
-// hole-filter-with-color.h
-// ==============================
 #include "proc/synthetic-stream.h"
 
 #include <iostream>
@@ -42,7 +28,7 @@ protected:
 private:
 
 	// カーネルサイズごとの距離の分散(標準偏差σの二乗)
-	float sqr_space_sigma_array[5] ={ 0.444f, 1.12f, 2.811f, 6.829f, 15.122 };
+	float _sqr_space_sigma_array[5] ={ 0.444f, 1.12f, 2.811f, 6.829f, 15.122 };
 
 	/** sRGBからCIE 1976 L*a*b*への変換
 	* \param[in] rgb 変換元 画像すべてのRGBを持つ配列
@@ -77,8 +63,8 @@ private:
 	* \param[in] depth_image 深度画像データ
 	* \param[in] lab_image 色画像データ
 	* \param[in] kernel_w　カーネルの一片の半分の切り捨て
-	* \param[in] x 対称x座標
-	* \param[in] y 対称y座標
+	* \param[in] x 対象x座標
+	* \param[in] y 対象y座標
 	*/
 	void kernel_process( uint16_t& new_depth, const uint16_t* depth_image, const float* lab_image, const int kernel_w, const int x, const int y );
 

@@ -135,7 +135,7 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 
 		//timer_end("init 2");
 
-		//timer_start();
+		timer_start();
 		for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
@@ -144,13 +144,14 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				new_data[i] = depth_data[i];
 				if ( 380 < x && x < 470 && 180 < y && y < 300 )
 				{
-					//kernel_process( new_data[i], depth_data, lab_data, kernel_w, x, y );
+					kernel_process( new_data[i], depth_data, lab_data, kernel_w, x, y );
 				}
 			}
 		}
-		//timer_end("filter roop 1");
+		timer_end("filter roop 1");
 
-		//timer_start();
+		/*
+		timer_start();
 		for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
@@ -162,23 +163,10 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 				}
 			}
 		}
-		//timer_end("filter roop 2");
+		timer_end("filter roop 2");
 
-		//timer_start();
+		timer_start();
 		for ( int y = 1; y < height - 1; ++y )
-		{
-			for ( int x = 1; x < width - 1; ++x )
-			{
-				int i = y * width + x;
-				if ( 380 < x && x < 470 && 180 < y && y < 300 )
-				{
-					//kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
-				}
-			}
-		}
-		//timer_end("filter roop 3");
-
-		/*for ( int y = 1; y < height - 1; ++y )
 		{
 			for ( int x = 1; x < width - 1; ++x )
 			{
@@ -188,7 +176,21 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 					kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
 				}
 			}
-		}*/
+		}
+		timer_end("filter roop 3");
+
+		for ( int y = 1; y < height - 1; ++y )
+		{
+			for ( int x = 1; x < width - 1; ++x )
+			{
+				int i = y * width + x;
+				if ( 380 < x && x < 470 && 180 < y && y < 300 )
+				{
+					kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
+				}
+			}
+		}
+		*/
 
 
 		delete[] lab_data;
@@ -282,7 +284,7 @@ float hole_filter_with_color::lab_distance( const float* r_lab, const float* l_l
 void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t* depth_image, const float* lab_image, const int kernel_w, const int x, const int y )
 {
 	int size = kernel_w * 2 + 1;
-	const float& sqr_space_sigma = sqr_space_sigma_array[kernel_w-1];
+	const float& sqr_space_sigma = _sqr_space_sigma_array[kernel_w-1];
 
 	int target = y * 848 + x;
 

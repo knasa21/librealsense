@@ -25,4 +25,13 @@ namespace librealsense
     }
 #endif // __SSSE3__
 #endif // RS2_USE_CUDA
+
+#ifdef RS2_USE_CUDA
+	std::shared_ptr<librealsense::hole_filter_with_color> create_hole_filter_with_color()
+	{
+		return std::make_shared<librealsense::hole_filter_with_color>();
+	}
+#else
+#endif // RS2_USE_CUDA
+
 }
