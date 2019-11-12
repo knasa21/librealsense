@@ -138,7 +138,7 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		convert_rgb8_to_lab( rgb_data, _lab_data.get(), width, height );
 		timer_end( "convert_rgb8_to_lab" );
 
-		const int kernel_w = 4;
+		const int kernel_w = 5;
 		const int kernel_size = 2 * kernel_w + 1;
 		//float kernel_lab_l[kernel_size * kernel_size] ={ 0 };
 		//float kernel_lab_a[kernel_size * kernel_size] ={ 0 };
@@ -149,63 +149,12 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 
 		timer_start();
 		hole_filter_process( new_data, depth_data, _lab_data.get(), kernel_w, width, height );
+		/*hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
 		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
-		/*for ( int y = 1; y < height - 1; ++y )
-		{
-			for ( int x = 1; x < width - 1; ++x )
-			{
-				int i = y * width + x;
-				new_data[i] = depth_data[i];
-				if ( 380 < x && x < 470 && 180 < y && y < 300 )
-				{
-					kernel_process( new_data[i], depth_data, _lab_data.get(), kernel_w, x, y );
-				}
-			}
-		}*/
+		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
+		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
+		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );*/
 		timer_end("filter roop 1");
-
-		/*
-		timer_start();
-		for ( int y = 1; y < height - 1; ++y )
-		{
-			for ( int x = 1; x < width - 1; ++x )
-			{
-				int i = y * width + x;
-				if ( 380 < x && x < 470 && 180 < y && y < 300 )
-				{
-					//kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
-				}
-			}
-		}
-		timer_end("filter roop 2");
-
-		timer_start();
-		for ( int y = 1; y < height - 1; ++y )
-		{
-			for ( int x = 1; x < width - 1; ++x )
-			{
-				int i = y * width + x;
-				if ( 380 < x && x < 470 && 180 < y && y < 300 )
-				{
-					kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
-				}
-			}
-		}
-		timer_end("filter roop 3");
-
-		for ( int y = 1; y < height - 1; ++y )
-		{
-			for ( int x = 1; x < width - 1; ++x )
-			{
-				int i = y * width + x;
-				if ( 380 < x && x < 470 && 180 < y && y < 300 )
-				{
-					kernel_process( new_data[i], new_data, lab_data, kernel_w, x, y );
-				}
-			}
-		}
-		*/
-
 
 		//delete[] lab_data;
 
@@ -298,13 +247,13 @@ float hole_filter_with_color::lab_distance( const float* r_lab, const float* l_l
 
 void hole_filter_with_color::hole_filter_process( uint16_t * new_depth_image, const uint16_t * depth_image, const float * lab_image, const int kernel_w, const int width, const int height )
 {
-		for ( int y = 1; y < height - 1; ++y )
+		for ( int y = kernel_w; y < height - kernel_w; ++y )
 		{
-			for ( int x = 1; x < width - 1; ++x )
+			for ( int x = kernel_w; x < width - kernel_w; ++x )
 			{
 				int i = y * width + x;
 				new_depth_image[i] = depth_image[i];
-				if ( 380 < x && x < 470 && 180 < y && y < 300 )
+				//if ( 380 < x && x < 470 && 180 < y && y < 300 )
 				{
 					kernel_process( new_depth_image[i], depth_image, lab_image, kernel_w, x, y );
 				}
@@ -338,26 +287,27 @@ void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t
 		}
 	}
 
-	std::vector<float> lab_dists( size*size );
-	std::vector<float> sqrt_lab_dists( size*size );
 
-	// 先に色距離を配列に代入 
-	for ( int n = -kernel_w; n <= kernel_w; ++n )
-	{
-		for ( int m = -kernel_w; m <= kernel_w; ++m )
-		{
-			int source = ( y + n ) * 848 + ( x + m );
-			float lab_dist = lab_distance( &lab_image[target * 3], &lab_image[source * 3] );
+	//std::vector<float> lab_dists( size*size );
+	//std::vector<float> sqrt_lab_dists( size*size );
 
-			int um = m + kernel_w;
-			int un = n + kernel_w;
-			lab_dists[un*size + um] = lab_dist;
-			sqrt_lab_dists[un*size + um] =  lab_dist * lab_dist * 3;
-		}
-	}
+	//// 先に色距離を配列に代入 
+	//for ( int n = -kernel_w; n <= kernel_w; ++n )
+	//{
+	//	for ( int m = -kernel_w; m <= kernel_w; ++m )
+	//	{
+	//		int source = ( y + n ) * 848 + ( x + m );
+	//		float lab_dist = lab_distance( &lab_image[target * 3], &lab_image[source * 3] );
+
+	//		int um = m + kernel_w;
+	//		int un = n + kernel_w;
+	//		lab_dists[un*size + um] = lab_dist;
+	//		sqrt_lab_dists[un*size + um] =  lab_dist * lab_dist * 3;
+	//	}
+	//}
 
 	// 色距離のシグマ値は標準偏差
-	const float sqr_color_sigma = calc_dispersion( lab_dists );
+	const float sqr_color_sigma = 30; // calc_dispersion( lab_dists );
 
 	// 標準偏差0は打ち切り
 	if ( sqr_color_sigma == 0 )
@@ -368,6 +318,7 @@ void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t
 	float denominator = 0;
 	float numerator = 0;
 
+	int black_counter = 0;
 	// 値計算
 	for ( int n = -kernel_w; n <= kernel_w; ++n )
 	{
@@ -389,7 +340,10 @@ void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t
 			}
 
 			const float& P = P_vec[k];
-			const float N = std::exp( -sqrt_lab_dists[k] / ( 2 * sqr_color_sigma ) );
+			float lab_dist = lab_distance( &lab_image[target * 3], &lab_image[source * 3] );
+			if ( lab_dist > 5 ) continue;
+			//const float N = std::exp( -sqrt_lab_dists[k] / (2 * sqr_color_sigma) );
+			const float N = std::exp( - lab_dist / (2 * sqr_color_sigma) );
 
 			numerator   += depth_image[source] * P * N;
 			denominator += P * N;
