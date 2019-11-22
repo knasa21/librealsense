@@ -5,6 +5,7 @@
 #include "example.hpp"          // Include short list of convenience functions for rendering
 
 #include <algorithm>            // std::min, std::max
+#include <iostream>
 
 // Helper functions
 void register_glfw_callbacks(window& app, glfw_state& app_state);
@@ -23,15 +24,28 @@ int main(int argc, char * argv[]) try
     // We want the points object to be persistent so we can display the last cloud when a frame drops
     rs2::points points;
 
+	rs2::align align_to_color(RS2_STREAM_COLOR);
+	rs2::hole_filter_with_color hole_filter;
+
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
     // Start streaming with default recommended configuration
     pipe.start();
 
+	int count = 0;
+
     while (app) // Application still alive?
     {
         // Wait for the next set of frames from the camera
         auto frames = pipe.wait_for_frames();
+		frames = align_to_color.process( frames );
+		if ( ++count < 100 ) {
+			frames = hole_filter.process(frames);
+		}
+		else if( count > 200 ){
+			count = 0;
+		}
+		std::cout << count << std::endl;
 
         auto color = frames.get_color_frame();
 
