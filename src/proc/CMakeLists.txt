@@ -28,6 +28,7 @@ target_sources(${LRS_TARGET}
         "${CMAKE_CURRENT_LIST_DIR}/zero-order.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/hole-filter-with-color.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/units-transform.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/force-flattening-filter.cpp"
 
         "${CMAKE_CURRENT_LIST_DIR}/processing-blocks-factory.h"
         "${CMAKE_CURRENT_LIST_DIR}/align.h"
@@ -47,4 +48,5 @@ target_sources(${LRS_TARGET}
         "${CMAKE_CURRENT_LIST_DIR}/zero-order.h"
         "${CMAKE_CURRENT_LIST_DIR}/hole-filter-with-color.h"
         "${CMAKE_CURRENT_LIST_DIR}/units-transform.h"
+	"${CMAKE_CURRENT_LIST_DIR}/force-flattening-filter.h"
 )

@@ -68,6 +68,8 @@ int main(int argc, char * argv[]) try
     rs2::align align_to_depth(RS2_STREAM_DEPTH);
     rs2::align align_to_color(RS2_STREAM_COLOR);
 	rs2::hole_filter_with_color hole;
+	rs2::force_flattening_filter flattening;
+    rs2::rates_printer printer;
 
     float       alpha = 0.5f;               // Transparancy coefficient 
     direction   dir = direction::to_color;  // Alignment direction
@@ -77,13 +79,13 @@ int main(int argc, char * argv[]) try
     while (app) // Application still alive?
     {
         // Using the align object, we block the application until a frameset is available
-        rs2::frameset frameset = pipe.wait_for_frames();
+		rs2::frameset frameset = pipe.wait_for_frames();
 
 		timer_start( start );
         if (dir == direction::to_depth)
         {
             // Align all frames to depth viewport
-            frameset = align_to_depth.process(frameset);
+            //frameset = align_to_depth.process(frameset);
         }
         else
         {
@@ -98,9 +100,15 @@ int main(int argc, char * argv[]) try
 			frameset = hole.process( frameset );
 			timer_end( start, "hole process" );
 		}
+		else {
+			timer_start( start );
+			frameset = flattening.process( frameset );
+			timer_end( start, "flatten process" );
+
+		}
 
         // With the aligned frameset we proceed as usual
-        auto depth = frameset.get_depth_frame();
+		auto depth = frameset.get_depth_frame();
         auto color = frameset.get_color_frame();
         auto colorized_depth = c.colorize(depth);
 
@@ -122,8 +130,6 @@ int main(int argc, char * argv[]) try
             color_image.render(color, { 0, 0, app.width(), app.height() });
             depth_image.render(colorized_depth, { 0, 0, app.width(), app.height() }, 1 - alpha);
         }
-
-		draw_square( 380, 180, 470, 300 );
 
         glColor4f(1.f, 1.f, 1.f, 1.f);
         glDisable(GL_BLEND);

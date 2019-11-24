@@ -5,6 +5,7 @@
 #include "sse/sse-align.h"
 #include "cuda/cuda-align.h"
 #include "cuda/cuda-hole-filter-with-color.h"
+#include "cuda/cuda-force-flattening-filter.h"
 
 namespace librealsense
 {
@@ -33,7 +34,21 @@ namespace librealsense
 		 return std::make_shared<librealsense::hole_filter_with_color_cuda>();
 		//return std::make_shared<librealsense::hole_filter_with_color>();
 	}
+
+	std::shared_ptr<librealsense::force_flattening_filter> create_force_flattening_filter()
+	{
+		 return std::make_shared<librealsense::force_flattening_filter_cuda>();
+	}
 #else
+	std::shared_ptr<librealsense::hole_filter_with_color> create_hole_filter_with_color()
+	{
+		return std::make_shared<librealsense::hole_filter_with_color>();
+	}
+
+	std::shared_ptr<librealsense::force_flattening_filter> create_force_flattening_filter()
+	{
+		 return std::make_shared<librealsense::force_flattening_filter>();
+	}
 #endif // RS2_USE_CUDA
 
 }

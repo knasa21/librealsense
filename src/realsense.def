@@ -182,6 +182,7 @@ EXPORTS
     rs2_create_disparity_transform_block
     rs2_create_zero_order_invalidation_block
 	rs2_create_hole_filter_with_color_block
+	rs2_create_force_flattening_filter_block
     
     rs2_embedded_frames_count
     rs2_extract_frame

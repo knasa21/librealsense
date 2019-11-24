@@ -244,10 +244,16 @@ rs2_processing_block* rs2_create_rates_printer_block(rs2_error** error);
 rs2_processing_block* rs2_create_zero_order_invalidation_block(rs2_error** error);
 
 /**
-* Create HoleFilterWithColor processing block.
+* Create Hole Filter with Color processing block.
 * \param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored
 */
 rs2_processing_block* rs2_create_hole_filter_with_color_block( rs2_error** error );
+
+/**
+* Create Force Flattening Filter block.
+* \param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored
+*/
+rs2_processing_block* rs2_create_force_flattening_filter_block( rs2_error** error );
 
 /**
 * Retrieve processing block specific information, like name.

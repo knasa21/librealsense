@@ -1077,5 +1077,36 @@ namespace rs2
 			return block;
 		}
 	};
+
+	/**
+	* 色による領域拡張法を利用して
+	* 同領域を単一平面に強制的に矯正するフィルタ
+	*/
+	class force_flattening_filter : public filter
+	{
+	public:
+		force_flattening_filter() : filter( init(), 1 ) {}
+
+		frameset process( frameset frames )
+		{
+			return filter::process( frames );
+		}
+
+	private:
+		friend class context;
+		std::shared_ptr<rs2_processing_block> init()
+		{
+			rs2_error* e = nullptr;
+
+			auto block = std::shared_ptr<rs2_processing_block>(
+				rs2_create_force_flattening_filter_block( &e ),
+				rs2_delete_processing_block
+				);
+			error::handle( e );
+
+			return block;
+		}
+	};
+
 }
 #endif // LIBREALSENSE_RS2_PROCESSING_HPP

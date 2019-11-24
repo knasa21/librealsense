@@ -29,6 +29,7 @@
 #include "proc/zero-order.h"
 #include "proc/hole-filter-with-color.h"
 #include "proc/hole-filling-filter.h"
+#include "proc/force-flattening-filter.h"
 #include "proc/yuy2rgb.h"
 #include "proc/rates-printer.h"
 #include "media/playback/playback_device.h"
@@ -1987,6 +1988,15 @@ rs2_processing_block* rs2_create_hole_filter_with_color_block( rs2_error** error
 	return new rs2_processing_block{ block };
 }
 NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
+
+rs2_processing_block* rs2_create_force_flattening_filter_block(rs2_error** error) BEGIN_API_CALL
+{
+	auto block = create_force_flattening_filter();
+
+    return new rs2_processing_block{ block };
+}
+NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
+
 
 float rs2_get_depth_scale(rs2_sensor* sensor, rs2_error** error) BEGIN_API_CALL
 {
