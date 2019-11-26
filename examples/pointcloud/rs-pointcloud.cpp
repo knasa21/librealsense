@@ -26,6 +26,7 @@ int main(int argc, char * argv[]) try
 
 	rs2::align align_to_color(RS2_STREAM_COLOR);
 	rs2::hole_filter_with_color hole_filter;
+	rs2::force_flattening_filter flat_filter;
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
@@ -40,7 +41,8 @@ int main(int argc, char * argv[]) try
         auto frames = pipe.wait_for_frames();
 		frames = align_to_color.process( frames );
 		if ( ++count < 100 ) {
-			frames = hole_filter.process(frames);
+			//frames = hole_filter.process(frames);
+			frames = flat_filter.process(frames);
 		}
 		else if( count > 200 ){
 			count = 0;

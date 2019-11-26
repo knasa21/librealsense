@@ -25,17 +25,17 @@ protected:
 		_helper.convert_rgb8_to_lab( rgb, lab, width, height );
 	}
 
-	void hole_filter_process(
-		uint16_t* new_depth_image,
-		const uint16_t* depth_image,
-		const float* lab_image,
-		const int kernel_w,
-		const int width,
-		const int height
-	) override
-	{
-		_helper.hole_filter_process( new_depth_image, depth_image, lab_image, kernel_w, width, height );
-	}
+	//void hole_filter_process(
+	//	uint16_t* new_depth_image,
+	//	const uint16_t* depth_image,
+	//	const float* lab_image,
+	//	const int kernel_w,
+	//	const int width,
+	//	const int height
+	//) override
+	//{
+	//	_helper.hole_filter_process( new_depth_image, depth_image, lab_image, kernel_w, width, height );
+	//}
 
 private:
 	force_flattening_filter_cuda_helper _helper;

@@ -49,7 +49,7 @@ int main(int argc, char * argv[]) try
 	chrono::system_clock::time_point start;
 
     // Create and initialize GUI related objects
-    window app(848, 480, "RealSense Align Example"); // Simple window handling
+    window app(848, 640, "RealSense Align Example"); // Simple window handling
     ImGui_ImplGlfw_Init(app, false);      // ImGui library intializition
     rs2::colorizer c;                     // Helper to colorize depth images
     texture depth_image, color_image;     // Helpers for renderig images
@@ -71,10 +71,10 @@ int main(int argc, char * argv[]) try
 	rs2::force_flattening_filter flattening;
     rs2::rates_printer printer;
 
-    float       alpha = 0.5f;               // Transparancy coefficient 
+    float       alpha = 1.0f;               // Transparancy coefficient 
     direction   dir = direction::to_color;  // Alignment direction
 
-	bool useHF = true;
+	bool useHF = false;
 
     while (app) // Application still alive?
     {

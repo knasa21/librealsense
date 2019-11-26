@@ -7,8 +7,9 @@
 #include <iostream>
 #include <chrono>
 #include <memory>
-
-using namespace std;
+#include <forward_list>
+#include <deque>
+#include <list>
 
 namespace librealsense
 {
@@ -31,11 +32,60 @@ protected:
 	// カーネルサイズごとの距離の分散(標準偏差σの二乗)
 	float _sqr_space_sigma_array[5] ={ 0.444f, 1.12f, 2.811f, 6.829f, 15.122 };
 
-	chrono::system_clock::time_point _chrono_start, _chrono_end;
+	std::chrono::system_clock::time_point _chrono_start, _chrono_end;
 
 	std::shared_ptr<float> _lab_data;
 
 	std::shared_ptr<rs2::frame> _tgt_depth;
+
+	// ラベル用配列
+	std::unique_ptr<uint32_t[]> _labels;
+
+	// 色距離保存配列
+	std::unique_ptr<float[]> _lab_distances;
+
+	// 画像サイズ
+	uint16_t _width, _height;
+
+	// クラスタリスト
+	std::vector<std::vector<uint32_t>> _clusters;
+
+	/** ラベリングを行う
+	* \param[in]  lab_image 探索元となるカラー画像
+	* \param[in,out] labeled_indices ラベルがつけられたインデックスのリスト
+	* \param[in] label_id 今回付けるラベルのID
+	* \param[in] start_index 最初に選ぶピクセルのインデックス
+	* \return クラスタのサイズ
+	*/
+	int labeling_process(
+		const float* lab_image,
+		std::vector<uint32_t>& labeled_indices,
+		const uint32_t label_id,
+		const uint32_t start_index,
+		const float threshold
+		);
+
+	/** ラベルのつけられたポイントの平面化 
+	* \param[in] depth_image 深度データ
+	* \param[in,out] flat_depth_image 平面化した深度データ
+	* \param[in] clusters クラスタ毎のインデックス配列
+	*/
+	void flattening(
+		const uint16_t* depth_image,
+		uint16_t* flat_depth_image,
+		std::vector<std::vector<uint32_t>>& clusters
+		);
+
+	/** RANSACによる平面推定
+	* \param[in] depth_image 深度データ
+	* \param[in] indices 使用するインデックス配列
+	* \param[in, out] coefficients 平面の式の係数
+	*/
+	void ransac_plane(
+		const uint16_t* depth_image,
+		const std::vector<uint32_t>& indices,
+		std::vector<float>& coefficients
+	);
 
 	/** sRGBからCIE 1976 L*a*b*への変換
 	* \param[in] rgb 変換元 画像すべてのRGBを持つ配列
@@ -99,6 +149,12 @@ protected:
 	*/
 	virtual float calc_dispersion( const std::vector<float>& vals );
 
+	/** 色距離の配列を作成
+	* \param[in] lab_image lab画像
+	* \param[in,out] distances 色距離配列 
+	*/
+	virtual void make_lab_distances( const float* lab_image, float* distances, const int width, const int height );
+
 	/** 時間計測開始
 	*/
 	void timer_start();
@@ -106,8 +162,12 @@ protected:
 	/** 時間計測終了、出力
 	* \param[in] text 出力時追加テキスト
 	*/
-	void timer_end( const string& text );
+	void timer_end( const std::string& text );
 
+	/** 範囲指定乱数生成器
+	* \return min <= return <= max
+	*/
+	uint64_t rand_range( const int& min, const int& max );
 };
 
 }
