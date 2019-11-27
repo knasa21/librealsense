@@ -422,11 +422,11 @@ void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t*
 
 		if ( coefficients.size() == 4 )
 		{
-			std::cout << "coef : " <<
+			/*std::cout << "coef : " <<
 				coefficients[0] << ", " <<
 				coefficients[1] << ", " <<
 				coefficients[2] << ", " <<
-				coefficients[3] << std::endl;
+				coefficients[3] << std::endl;*/
 
 			// 平面化
 			for ( const auto& index : indices )
@@ -444,6 +444,9 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 {
 	// 試行回数
 	const int times = 50;
+	// 一致とみなす閾値(mm)
+	const float threshold = 5;
+
 	// 深度データを持つインデックス配列
 	std::vector<const uint32_t*> available_indices;
 
@@ -463,10 +466,10 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 		return;
 	}
 
-	// 点と面の距離が最小の値
-	float min_distance = -1;
-	// 点と面の距離が最小の面の係数
-	float min_a, min_b, min_c, min_d;
+	// 最大の一致数
+	float max_match_count = 0;
+	// 一致数が最も多い平面の係数
+	float max_a, max_b, max_c, max_d;
 
 	for ( int i = 0; i < times; ++i )
 	{
@@ -474,10 +477,12 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 		auto bi = 0;
 		auto ci = 0;
 
+		// 有効な値を持つ点のインデックス
 		uint32_t ava_index_a = 0;
 		uint32_t ava_index_b = 0;
 		uint32_t ava_index_c = 0;
 
+		// 被らないようにランダムで決める
 		while ( ava_index_a == ava_index_b ||
 				ava_index_b == ava_index_c || 
 				ava_index_c == ava_index_a )
@@ -486,6 +491,8 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 			ava_index_b = rand_range( 0, available_size - 1 );
 			ava_index_c = rand_range( 0, available_size - 1 );
 		}
+
+		// 使用する点のインデックス
 		ai = *available_indices[ava_index_a];
 		bi = *available_indices[ava_index_b];
 		ci = *available_indices[ava_index_c];
@@ -508,8 +515,6 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 		// 平面の係数Dを求める
 		float ad = -cross_x * ax - cross_y * ay - cross_z * az;
 
-		// 点と平面の距離を求めてその差の合計を求める
-		float dist_sum = 0;
 		// 分母部分は共通なので先に作っておく
 		float pow_a = cross_x * cross_x;
 		float pow_b = cross_y * cross_y;
@@ -519,35 +524,48 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 		if ( sqrt_pow == 0 )
 		{
 			// 0除算を避ける
-			std::cout << "sqrt_pow is 0 !!" << std::endl;
 			continue;
 		}
+
+		// 一致数カウンタ
+		int match_count = 0;
+		// 点と平面の距離
+		float dist = 0;
+
 		// 各点で回す
 		for ( const auto& index : available_indices )
 		{
 			uint16_t px = *index % _width;
 			uint16_t py = *index / _width;
 			uint16_t pz = depth_image[*index];
-			dist_sum = std::abs( cross_x * px + cross_y * py + cross_z * pz + ad ) /
-				std::sqrt( sqrt_pow );
+			dist = std::abs( cross_x * px + 
+							 cross_y * py +	
+							 cross_z * pz + ad ) / 
+				   std::sqrt( sqrt_pow );
+
+			// 閾値以内の距離か
+			if ( dist < threshold )
+			{
+				++match_count;
+			}
+
 		}
 
-		// これまでの合計より小さければ更新 
-		if ( min_distance > dist_sum || min_distance < 0 )
+		// これまでの合計より一致数が大きければ更新 
+		if ( match_count > max_match_count )
 		{
-			min_distance = dist_sum;
-			min_a = cross_x;
-			min_b = cross_y;
-			min_c = cross_z;
-			min_d = ad;
+			max_match_count = match_count;
+			max_a = cross_x;
+			max_b = cross_y;
+			max_c = cross_z;
+			max_d = ad;
 		}
 	}
-	if ( min_distance > 20 ) return;
 	coefficients.clear();
-	coefficients.push_back( min_a );
-	coefficients.push_back( min_b );
-	coefficients.push_back( min_c );
-	coefficients.push_back( min_d );
+	coefficients.push_back( max_a );
+	coefficients.push_back( max_b );
+	coefficients.push_back( max_c );
+	coefficients.push_back( max_d );
 }
 
 void force_flattening_filter::kernel_process( uint16_t& new_depth, const uint16_t* depth_image, const float* lab_image, const int kernel_w, const int x, const int y )
