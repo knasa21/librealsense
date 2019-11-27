@@ -84,9 +84,9 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		return f;
 	}
 
-	int width = depth_w;
-	int height = depth_h;
-	int size = width * height;
+	int _width = depth_w;
+	int _height = depth_h;
+	int size = _width * _height;
 
 	if ( !_tgt_depth )
 	{
@@ -94,8 +94,8 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 			src_depth.get_profile(),
 			src_depth,
 			src_depth.get_bytes_per_pixel(),
-			width,
-			height,
+			_width,
+			_height,
 			src_depth.get_stride_in_bytes(),
 			RS2_EXTENSION_DEPTH_FRAME
 		) );
@@ -135,7 +135,7 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		if ( !_lab_data ) { _lab_data.reset( new float[size * 3] ); }
 
 		timer_start();
-		convert_rgb8_to_lab( rgb_data, _lab_data.get(), width, height );
+		convert_rgb8_to_lab( rgb_data, _lab_data.get(), _width, _height );
 		timer_end( "convert_rgb8_to_lab" );
 
 		const int kernel_w = 5;
@@ -148,13 +148,13 @@ rs2::frame hole_filter_with_color::process_frame( const rs2::frame_source& sourc
 		//timer_end("init 2");
 
 		timer_start();
-		hole_filter_process( new_data, depth_data, _lab_data.get(), kernel_w, width, height );
+		hole_filter_process( new_data, depth_data, _lab_data.get(), kernel_w, _width, _height );
 		/*hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
 		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
 		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
 		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );
 		hole_filter_process( new_data, new_data, _lab_data.get(), kernel_w, width, height );*/
-		timer_end("filter roop 1");
+		timer_end("hole filter with color");
 
 		//delete[] lab_data;
 
@@ -266,7 +266,7 @@ void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t
 	int size = kernel_w * 2 + 1;
 	const float& sqr_space_sigma = _sqr_space_sigma_array[kernel_w-1];
 
-	int target = y * 848 + x;
+	int target = y * _width + x;
 
 	static std::vector<float> P_vec( size*size );
 
@@ -324,7 +324,7 @@ void hole_filter_with_color::kernel_process( uint16_t& new_depth, const uint16_t
 	{
 		for ( int m = -kernel_w; m <= kernel_w; ++m )
 		{
-			const int source = ( y + n ) * 848 + ( x + m );
+			const int source = ( y + n ) * _width + ( x + m );
 			const int k = ( n + kernel_w ) * size + ( m + kernel_w );
 
 			// Ž©•ª‚ÍŠÜ‚ß‚È‚¢

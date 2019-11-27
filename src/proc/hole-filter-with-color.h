@@ -37,6 +37,9 @@ protected:
 
 	std::shared_ptr<rs2::frame> _tgt_depth;
 
+	// 画像サイズ
+	int _width, _height;
+
 	/** sRGBからCIE 1976 L*a*b*への変換
 	* \param[in] rgb 変換元 画像すべてのRGBを持つ配列
 	* \param[in,out] lab 変換先 画像すべてのL*a*b*値を持つ配列

@@ -89,6 +89,8 @@ rs2::frame force_flattening_filter::process_frame( const rs2::frame_source& sour
 	_height = depth_h;
 	int size = _width * _height;
 
+	std::cout << "input frame [ " << _width << " x " << _height << " ]" << std::endl;
+
 	if ( !_tgt_depth )
 	{
 		_tgt_depth = std::make_shared<rs2::frame>( source.allocate_video_frame(
@@ -159,24 +161,8 @@ rs2::frame force_flattening_filter::process_frame( const rs2::frame_source& sour
 
 		timer_start();
 		hole_filter_process( new_data, depth_data, _lab_data.get(), kernel_w, _width, _height );
-		timer_end( "filter roop 1" );
-
-		timer_start();
-		for ( const auto& cluster : _clusters )
-		{
-			int r = rand_range( 0, 255 );
-			int g = rand_range( 0, 255 );
-			int b = rand_range( 0, 255 );
-			for ( const auto& index : cluster )
-			{
-				rgb_data[index * 3 + 0] = r;
-				rgb_data[index * 3 + 1] = g;
-				rgb_data[index * 3 + 2] = b;
-			}
-		}
-		timer_end( "color setting" );
-
-		flattening( depth_data, new_data, _clusters );
+		flattening( depth_data, new_data, rgb_data, _clusters );
+		timer_end( "force flattening" );
 
 		output_frames.push_back( *_tgt_depth );
 		output_frames.push_back( src_color );
@@ -402,7 +388,7 @@ int force_flattening_filter::labeling_process( const float* lab_image, std::vect
 	return labeled_indices.size();
 }
 
-void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t* flat_depth_image, std::vector<std::vector<uint32_t>>& clusters )
+void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t* flat_depth_image, uint8_t* normal_image,std::vector<std::vector<uint32_t>>& clusters )
 {
 	for ( int y = 0; y < _height; ++y )
 	{
@@ -417,10 +403,10 @@ void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t*
 	{
 		if ( indices.size() == 0 ) continue;
 		// 係数
-		std::vector<float> coefficients;
-		ransac_plane( depth_image, indices, coefficients );
+		std::vector<float> coeff;
+		ransac_plane( depth_image, indices, coeff );
 
-		if ( coefficients.size() == 4 )
+		if ( coeff.size() == 4 )
 		{
 			/*std::cout << "coef : " <<
 				coefficients[0] << ", " <<
@@ -428,14 +414,32 @@ void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t*
 				coefficients[2] << ", " <<
 				coefficients[3] << std::endl;*/
 
+			// 法線データの正規化
+			float length = std::sqrt( coeff[0] * coeff[0] + coeff[1] * coeff[1] + coeff[2] * coeff[2] );
+			float normal_x = coeff[0] / length;
+			float normal_y = coeff[1] / length;
+			float normal_z = coeff[2] / length;
+
+			// 0`255の値で法線を示す
+			uint16_t color_x = normal_x * 255;
+			uint16_t color_y = normal_y * 255;
+			uint16_t color_z = normal_z * 255;
+
 			// 平面化
 			for ( const auto& index : indices )
 			{
 				int x = index % _width;
 				int y = index / _width;
 
-				flat_depth_image[index] = (coefficients[0] * x + coefficients[1] * y + coefficients[3]) / -coefficients[2];
+				flat_depth_image[index] = (coeff[0] * x + coeff[1] * y + coeff[3]) / -coeff[2];
+
+				// normal_image設定
+				normal_image[index*3 + 0] = color_x;
+				normal_image[index*3 + 1] = color_y;
+				normal_image[index*3 + 2] = color_z;
+
 			}
+
 		}
 	}
 }
@@ -445,7 +449,7 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 	// 試行回数
 	const int times = 50;
 	// 一致とみなす閾値(mm)
-	const float threshold = 5;
+	const float threshold = 2;
 
 	// 深度データを持つインデックス配列
 	std::vector<const uint32_t*> available_indices;
@@ -560,6 +564,14 @@ void force_flattening_filter::ransac_plane( const uint16_t* depth_image, const s
 			max_c = cross_z;
 			max_d = ad;
 		}
+	}
+	// z方向が負となるように(カメラ側を向くようにする)
+	if ( max_c > 0 )
+	{
+		max_a *= -1;
+		max_b *= -1;
+		max_c *= -1;
+		max_d *= -1;
 	}
 	coefficients.clear();
 	coefficients.push_back( max_a );

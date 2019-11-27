@@ -68,11 +68,13 @@ protected:
 	/** ラベルのつけられたポイントの平面化 
 	* \param[in] depth_image 深度データ
 	* \param[in,out] flat_depth_image 平面化した深度データ
+	* \param[in,out] normal_image 平面部分の法線データ
 	* \param[in] clusters クラスタ毎のインデックス配列
 	*/
 	void flattening(
 		const uint16_t* depth_image,
 		uint16_t* flat_depth_image,
+		uint8_t* normal_image,
 		std::vector<std::vector<uint32_t>>& clusters
 		);
 
