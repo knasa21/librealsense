@@ -8,6 +8,8 @@
 
 #include <chrono>
 #include <iostream>
+#include <thread>
+#include <atomic>
 
 using namespace std;
 
@@ -71,15 +73,88 @@ int main(int argc, char * argv[]) try
 	rs2::force_flattening_filter flattening;
     rs2::rates_printer printer;
 
+	rs2::decimation_filter dec;
+	dec.set_option( RS2_OPTION_FILTER_MAGNITUDE, 2 );
+	rs2::disparity_transform depth2disparity;
+	rs2::disparity_transform disparity2depth( false );
+	rs2::spatial_filter spat;
+	rs2::temporal_filter temp;
+	std::atomic_bool alive = true;
+
+	rs2::decimation_filter dec_color(2.0, rs2_stream::RS2_STREAM_COLOR, rs2_format::RS2_FORMAT_RGB8);
+	//dec_color.set_stream_filter( rs2_stream::RS2_STREAM_COLOR, rs2_format::RS2_FORMAT_RGB8 );
+	//dec_color.set_option( RS2_OPTION_FILTER_MAGNITUDE, 2 );
+
+	rs2::frame_queue postprocessed_frames;
+
     float       alpha = 1.0f;               // Transparancy coefficient 
     direction   dir = direction::to_color;  // Alignment direction
 
 	bool useHF = false;
 
+	std::thread video_processing_thread( [&]() {
+		// In order to generate new composite frames, we have to wrap the processing
+		// code in a lambda
+		rs2::processing_block frame_processor(
+			[&]( rs2::frameset data, // Input frameset (from the pipeline)
+				rs2::frame_source& source ) // Frame pool that can allocate new frames
+		{
+			// First make the frames spatially aligned
+
+			// Next, apply depth post-processing
+			rs2::frame depth = data.get_depth_frame();
+			// Decimation will reduce the resultion of the depth image,
+			// closing small holes and speeding-up the algorithm
+			depth = dec.process( depth );
+			// To make sure far-away objects are filtered proportionally
+			// we try to switch to disparity domain
+			depth = depth2disparity.process( depth );
+			// Apply spatial filtering
+			depth = spat.process( depth );
+			// Apply temporal filtering
+			depth = temp.process( depth );
+			// If we are in disparity domain, switch back to depth
+			depth = disparity2depth.process( depth );
+
+			//checking the size before align process, due to decmiation set to 2, it will redcue the size as 1/2
+			float width = depth.as<rs2::video_frame>().get_width();
+			float height = depth.as<rs2::video_frame>().get_height();
+			std::cout << "before decimate depth:" << width << ", " << height << std::endl;
+
+			auto color = data.get_color_frame();
+			std::cout << "before decimate color:" << color.get_width() << ", " << color.get_height() << std::endl;
+			color = dec_color.process( color );
+			std::cout << "after decimate color:" << color.get_width() << ", " << color.get_height() << std::endl;
+			rs2::frameset combined = source.allocate_composite_frame( { depth, color } );
+			combined = align_to_color.process( combined );
+
+			//checking the size after align process, the size align to color 640*480
+			width = combined.get_color_frame().as<rs2::video_frame>().get_width();
+			height = combined.get_color_frame().as<rs2::video_frame>().get_height();
+
+			std::cout << "after align color:" << width << ", " << height << std::endl;
+
+			source.frame_ready( combined );
+		} );
+		// Indicate that we want the results of frame_processor
+		// to be pushed into postprocessed_frames queue
+		frame_processor >> postprocessed_frames;
+
+		while ( alive )
+		{
+			// Fetch frames from the pipeline and send them for processing
+			rs2::frameset fs = pipe.wait_for_frames();
+			if ( fs.size() != 0 ) frame_processor.invoke( fs );
+		}
+	} );
+
     while (app) // Application still alive?
     {
         // Using the align object, we block the application until a frameset is available
-		rs2::frameset frameset = pipe.wait_for_frames();
+		rs2::frameset frameset;
+		//frameset = pipe.wait_for_frames();
+
+		frameset = postprocessed_frames.wait_for_frame();
 
 		timer_start( start );
         if (dir == direction::to_depth)
@@ -90,7 +165,13 @@ int main(int argc, char * argv[]) try
         else
         {
             // Align all frames to color viewport
-            frameset = align_to_color.process(frameset);
+			auto color_b = frameset.get_color_frame();
+			auto depth_b = frameset.get_color_frame();
+			//std::cout << "before :" << color_b.get_width() << ", " << depth_b.get_width() << std::endl;
+            //frameset = align_to_color.process(frameset);
+			//auto color_a = frameset.get_color_frame();
+			//auto depth_a = frameset.get_color_frame();
+			//std::cout << "after :" << color_a.get_width() << ", " << depth_a.get_width() << std::endl;
         }
 		timer_end( start, "align" );
 

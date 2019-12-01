@@ -241,6 +241,48 @@ namespace librealsense
         register_option(RS2_OPTION_FILTER_MAGNITUDE, decimation_control);
     }
 
+	decimation_filter::decimation_filter( rs2_stream stream, rs2_format format ) : 
+		stream_filter_processing_block("Decimation Filter"),
+        _decimation_factor(decimation_default_val),
+        _control_val(decimation_default_val),
+        _patch_size(decimation_default_val),
+        _kernel_size(_patch_size*_patch_size),
+        _real_width(),
+        _real_height(0),
+        _padded_width(0),
+        _padded_height(0),
+        _recalc_profile(false),
+        _options_changed(false)
+    {
+        _stream_filter.stream = stream;
+        _stream_filter.format = format;
+
+        auto decimation_control = std::make_shared<ptr_option<uint8_t>>(
+            decimation_min_val,
+            decimation_max_val,
+            decimation_step,
+            decimation_default_val,
+            &_control_val, "Decimation scale");
+        decimation_control->on_set([this, decimation_control](float val)
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+
+            if (!decimation_control->is_valid(val))
+                throw invalid_value_exception(to_string()
+                    << "Unsupported decimation scale " << val << " is out of range.");
+
+            // Linear decimation factor
+            if (_control_val != _decimation_factor)
+            {
+                _patch_size = _decimation_factor = _control_val;
+                _kernel_size = _patch_size * _patch_size;
+                _options_changed = true;
+            }
+        });
+
+        register_option(RS2_OPTION_FILTER_MAGNITUDE, decimation_control);
+    }
+
     rs2::frame decimation_filter::process_frame(const rs2::frame_source& source, const rs2::frame& f)
     {
         update_output_profile(f);

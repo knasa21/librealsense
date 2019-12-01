@@ -758,6 +758,12 @@ namespace rs2
             set_option(RS2_OPTION_FILTER_MAGNITUDE, magnitude);
         }
 
+		decimation_filter(float magnitude, rs2_stream st, rs2_format fm) : filter(init(st,fm), 1)
+        {
+            set_option(RS2_OPTION_FILTER_MAGNITUDE, magnitude);
+        }
+
+
         decimation_filter(filter f) : filter(f)
         {
              rs2_error* e = nullptr;
@@ -784,6 +790,21 @@ namespace rs2
 
             return block;
         }
+
+		std::shared_ptr<rs2_processing_block> init( rs2_stream stream, rs2_format format )
+        {
+            rs2_error* e = nullptr;
+            auto block = std::shared_ptr<rs2_processing_block>(
+                rs2_create_decimation_filter_block_set_stream(stream, format ,&e),
+                rs2_delete_processing_block);
+            error::handle(e);
+
+            // Redirect options API to the processing block
+            //options::operator=(this);
+
+            return block;
+        }
+
     };
 
     class temporal_filter : public filter
@@ -1091,6 +1112,9 @@ namespace rs2
 		{
 			return filter::process( frames );
 		}
+
+	protected:
+		force_flattening_filter( std::shared_ptr<rs2_processing_block> block ) : filter( block, 1 ) {}
 
 	private:
 		friend class context;

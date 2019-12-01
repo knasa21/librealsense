@@ -14,6 +14,7 @@ namespace librealsense
     {
     public:
         decimation_filter();
+        decimation_filter( rs2_stream stream, rs2_format format );
 
     protected:
         rs2::frame prepare_target_frame(const rs2::frame& f, const rs2::frame_source& source, rs2_extension tgt_type);

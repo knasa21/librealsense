@@ -106,6 +106,21 @@ rs2::frame force_flattening_filter::process_frame( const rs2::frame_source& sour
 		reset_cache();
 	}
 
+	if ( !_tgt_color )
+	{
+		_tgt_color = std::make_shared<rs2::frame>( source.allocate_video_frame(
+			src_color.get_profile(),
+			src_color,
+			src_color.get_bytes_per_pixel(),
+			_width,
+			_height,
+			src_color.get_stride_in_bytes(),
+			RS2_EXTENSION_VIDEO_FRAME
+		) );
+
+		reset_cache();
+	}
+
 	if ( !_labels )
 	{
 		// ラベルの初期化
@@ -122,23 +137,29 @@ rs2::frame force_flattening_filter::process_frame( const rs2::frame_source& sour
 
 	//timer_end("init");
 
-	if ( _tgt_depth )
+	if ( _tgt_depth && _tgt_color )
 	{
 		//timer_start();
 		auto tgt_depth_ptr = dynamic_cast<librealsense::depth_frame*>((librealsense::frame_interface*)_tgt_depth->get());
+		auto tgt_color_ptr = dynamic_cast<librealsense::video_frame*>((librealsense::frame_interface*)_tgt_color->get());
+
 		auto orig_depth_ptr = dynamic_cast<librealsense::depth_frame*>((librealsense::frame_interface*)src_depth.get());
 		auto orig_color_ptr = dynamic_cast<librealsense::video_frame*>((librealsense::frame_interface*)src_color.get());
 
 		auto depth_data = (uint16_t*)orig_depth_ptr->get_frame_data();
-		auto new_data = (uint16_t*)tgt_depth_ptr->get_frame_data();
-
-		memset( new_data, 0, size * sizeof( uint16_t ) );
-
-		tgt_depth_ptr->set_sensor( orig_depth_ptr->get_sensor() );
-		auto du = orig_depth_ptr->get_units();
+		auto new_depth_data = (uint16_t*)tgt_depth_ptr->get_frame_data();
 
 		auto rgb_data = (uint8_t*)orig_color_ptr->get_frame_data();
-		//float* lab_data = new float[size*3];
+		auto new_color_data = (uint8_t*)tgt_color_ptr->get_frame_data();
+
+		memset( new_depth_data, 0, size * sizeof( uint16_t ) );
+		memset( new_color_data, 0, 3 * size * sizeof( uint8_t ) );
+
+		tgt_depth_ptr->set_sensor( orig_depth_ptr->get_sensor() );
+		tgt_color_ptr->set_sensor( orig_color_ptr->get_sensor() );
+
+		//auto du = orig_depth_ptr->get_units();
+
 		if ( !_lab_data ) { _lab_data.reset( new float[size * 3] ); }
 
 		timer_start();
@@ -152,7 +173,7 @@ rs2::frame force_flattening_filter::process_frame( const rs2::frame_source& sour
 
 		const int kernel_w = 5;
 		const int kernel_size = 2 * kernel_w + 1;
-		uint16_t kernel_depth[kernel_size * kernel_size] = { 0 };
+		//uint16_t kernel_depth[kernel_size * kernel_size] = { 0 };
 
 		//timer_end("init 2");
 
@@ -160,9 +181,12 @@ rs2::frame force_flattening_filter::process_frame( const rs2::frame_source& sour
 		_clusters.clear();
 
 		timer_start();
-		hole_filter_process( new_data, depth_data, _lab_data.get(), kernel_w, _width, _height );
-		flattening( depth_data, new_data, rgb_data, _clusters );
-		timer_end( "force flattening" );
+		hole_filter_process( new_depth_data, depth_data, _lab_data.get(), kernel_w, _width, _height );
+		timer_end( "labeling" );
+
+		timer_start();
+		flattening( depth_data, new_depth_data, new_color_data, _clusters );
+		timer_end( "flattening" );
 
 		output_frames.push_back( *_tgt_depth );
 		output_frames.push_back( src_color );
@@ -388,7 +412,7 @@ int force_flattening_filter::labeling_process( const float* lab_image, std::vect
 	return labeled_indices.size();
 }
 
-void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t* flat_depth_image, uint8_t* normal_image,std::vector<std::vector<uint32_t>>& clusters )
+void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t* flat_depth_image, uint8_t* normal_image, std::vector<std::vector<uint32_t>>& clusters )
 {
 	for ( int y = 0; y < _height; ++y )
 	{
@@ -421,9 +445,9 @@ void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t*
 			float normal_z = coeff[2] / length;
 
 			// 0`255の値で法線を示す
-			uint16_t color_x = normal_x * 255;
-			uint16_t color_y = normal_y * 255;
-			uint16_t color_z = normal_z * 255;
+			uint8_t color_x = normal_x * 255;
+			uint8_t color_y = normal_y * 255;
+			uint8_t color_z = normal_z * 255;
 
 			// 平面化
 			for ( const auto& index : indices )
@@ -431,7 +455,8 @@ void force_flattening_filter::flattening( const uint16_t* depth_image, uint16_t*
 				int x = index % _width;
 				int y = index / _width;
 
-				flat_depth_image[index] = (coeff[0] * x + coeff[1] * y + coeff[3]) / -coeff[2];
+				// 深度データの平面化は停止
+				//flat_depth_image[index] = (coeff[0] * x + coeff[1] * y + coeff[3]) / -coeff[2];
 
 				// normal_image設定
 				normal_image[index*3 + 0] = color_x;

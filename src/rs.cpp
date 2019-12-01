@@ -1933,6 +1933,15 @@ rs2_processing_block* rs2_create_decimation_filter_block(rs2_error** error) BEGI
 }
 NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
 
+rs2_processing_block* rs2_create_decimation_filter_block_set_stream(rs2_stream stream, rs2_format format, rs2_error** error) BEGIN_API_CALL
+{
+    auto block = std::make_shared<librealsense::decimation_filter>( stream, format);
+
+    return new rs2_processing_block{ block };
+}
+NOARGS_HANDLE_EXCEPTIONS_AND_RETURN(nullptr)
+
+
 rs2_processing_block* rs2_create_temporal_filter_block(rs2_error** error) BEGIN_API_CALL
 {
     auto block = std::make_shared<librealsense::temporal_filter>();

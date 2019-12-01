@@ -36,7 +36,9 @@ protected:
 
 	std::shared_ptr<float> _lab_data;
 
+	// 変換後深度、カラー
 	std::shared_ptr<rs2::frame> _tgt_depth;
+	std::shared_ptr<rs2::frame> _tgt_color;
 
 	// ラベル用配列
 	std::unique_ptr<uint32_t[]> _labels;

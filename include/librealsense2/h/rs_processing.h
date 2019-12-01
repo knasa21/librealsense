@@ -203,6 +203,7 @@ rs2_processing_block* rs2_create_align(rs2_stream align_to, rs2_error** error);
 * \param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored
 */
 rs2_processing_block* rs2_create_decimation_filter_block(rs2_error** error);
+rs2_processing_block* rs2_create_decimation_filter_block_set_stream(rs2_stream stream, rs2_format format, rs2_error** error);
 
 /**
 * Creates Depth post-processing filter block. This block accepts depth frames, applies temporal filter
