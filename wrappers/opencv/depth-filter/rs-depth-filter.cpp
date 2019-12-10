@@ -261,7 +261,7 @@ int main(int argc, char * argv[]) try
     high_confidence_filter filter;
 
     // See camera-settings.json next to the source / binaries
-    std::ifstream file("./camera-settings.json");
+   /* std::ifstream file("./camera-settings.json");
     if (file.good())
     {
         std::string str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -275,7 +275,7 @@ int main(int argc, char * argv[]) try
     else
     {
         std::cout << "Couldn't find camera-settings.json, skipping custom settings!" << std::endl;
-    }
+    }*/
 
     pipe.start(cfg);
 
